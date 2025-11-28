@@ -7,83 +7,117 @@
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1DB954">
 <style>
-/* Spotify-style dark theme */
-body { margin:0; font-family: Arial, sans-serif; background-color:#121212; color:#fff; }
-header { padding:20px; font-size:2em; text-align:center; font-weight:bold; background-color:#1E1E1E; }
-.search-container { display:flex; justify-content:center; padding:10px; }
-input[type="text"] { width:50%; padding:10px; border-radius:5px; border:none; outline:none; font-size:1em; }
-button { margin-left:10px; padding:10px 15px; border:none; border-radius:5px; background-color:#1DB954; color:#fff; cursor:pointer; font-weight:bold; }
-.main { display:flex; flex-direction:column; align-items:center; padding:10px; }
-.song-list { width:60%; margin-top:20px; }
-.song { display:flex; justify-content:space-between; padding:10px; margin-bottom:5px; background-color:#282828; border-radius:5px; cursor:pointer; transition:0.2s; }
-.song:hover { background-color:#383838; }
-.player { position:fixed; bottom:0; width:100%; background-color:#181818; display:flex; justify-content:space-around; align-items:center; padding:10px; }
-.player button { background:none; border:none; color:#1DB954; font-size:1.2em; cursor:pointer; }
-iframe { width:100%; height:80px; border:none; border-radius:5px; }
-.stats { margin:20px; text-align:center; }
+/* Spotify-style UI */
+body{margin:0;font-family:Arial,sans-serif;background:#121212;color:#fff;}
+header{padding:20px;text-align:center;font-size:2em;font-weight:bold;background:#1E1E1E;}
+.search-container{display:flex;justify-content:center;padding:10px;}
+input[type=text]{width:50%;padding:10px;border-radius:5px;border:none;outline:none;}
+button{margin-left:10px;padding:10px 15px;border:none;border-radius:5px;background:#1DB954;color:#fff;cursor:pointer;font-weight:bold;}
+.main{display:flex;flex-direction:column;align-items:center;padding:10px;}
+.song-list{width:60%;margin-top:20px;}
+.song{display:flex;justify-content:space-between;padding:10px;margin-bottom:5px;background:#282828;border-radius:5px;cursor:pointer;transition:0.2s;}
+.song:hover{background:#383838;}
+.player{position:fixed;bottom:0;width:100%;background:#181818;display:flex;justify-content:space-around;align-items:center;padding:10px;}
+.player button{background:none;border:none;color:#1DB954;font-size:1.2em;cursor:pointer;}
+.stats{margin:20px;text-align:center;}
+.playlist{margin-top:10px;width:60%;background:#1e1e1e;padding:10px;border-radius:5px;}
+.playlist h3{margin:0 0 10px 0;}
 </style>
 </head>
 <body>
 <header>Music Chamber</header>
 
 <div class="search-container">
-<input type="text" id="searchInput" placeholder="Search for a song...">
+<input type="text" id="searchInput" placeholder="Search for a track or artist">
 <button onclick="searchSong()">Search</button>
 </div>
 
 <div class="main">
 <div class="song-list" id="songList"></div>
+
+<div class="playlist" id="playlistContainer">
+<h3>Your Playlist</h3>
+<div id="playlistList"></div>
+</div>
+
 <div id="playerContainer"></div>
 <div class="stats" id="stats"></div>
 </div>
 
+<div class="player">
+<button onclick="prevSong()">⏮️</button>
+<button onclick="playPause()">⏯️</button>
+<button onclick="nextSong()">⏭️</button>
+<button onclick="toggleShuffle()">🔀</button>
+<button onclick="toggleLoop()">🔁</button>
+<button onclick="toggleLoopOne()">🔂</button>
+<button onclick="toggleAIShuffle()">🤖</button>
+</div>
+
 <script>
-const YT_API_KEY = 'AIzaSyCGIFGRXBMj9tfht-KksOlD04OWIgX0qHk';
+const CLIENT_ID = 'YOUR_JAMENDO_CLIENT_ID'; // ← Replace with your Jamendo client_id
 
-let currentSongIndex=0;
-let songs=[];
-let shuffle=false;
-let loop=false;
-let loopOne=false;
-let aiShuffle=false;
+let songs = [];
+let playlist = JSON.parse(localStorage.getItem('playlist')||'[]');
+let currentSongIndex = 0;
+let isPlaying = false;
+let shuffle=false, loop=false, loopOne=false, aiShuffle=false;
 
-function searchSong(){
+const playerContainer = document.getElementById('playerContainer');
+const playlistList = document.getElementById('playlistList');
+
+// ==== Jamendo Search ====
+async function searchSong(){
   const query=document.getElementById('searchInput').value;
   if(!query) return;
-  fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`)
-  .then(res=>res.json())
-  .then(data=>{
-    songs=data.items.map(item=>({title:item.snippet.title, videoId:item.id.videoId}));
-    displaySongs();
-  });
+  const res=await fetch(`https://api.jamendo.com/v3.0/tracks/?client_id=${CLIENT_ID}&format=json&limit=15&search=${encodeURIComponent(query)}`);
+  const data=await res.json();
+  songs = data.results;
+  displaySongs();
 }
 
 function displaySongs(){
-  const list=document.getElementById('songList');
-  list.innerHTML='';
-  songs.forEach((song,index)=>{
+  const container=document.getElementById('songList');
+  container.innerHTML='';
+  songs.forEach((s,i)=>{
     const div=document.createElement('div');
     div.className='song';
-    div.innerHTML=`<span>${song.title}</span><button onclick="playSong(${index})">▶️</button>`;
-    list.appendChild(div);
+    div.innerHTML=`<span>${s.name} — ${s.artist_name}</span>
+                   <span>
+                   <button onclick="playSong(${i})">▶️</button>
+                   <button onclick="addToPlaylist(${i})">➕</button>
+                   ${s.audiodownload_allowed? `<a href="${s.audiodownload}" download>⬇️</a>`:``}
+                   </span>`;
+    container.appendChild(div);
   });
 }
 
+// ==== Playback ====
 function playSong(index){
   currentSongIndex=index;
-  const container=document.getElementById('playerContainer');
-  container.innerHTML=`<iframe src="https://www.youtube.com/embed/${songs[index].videoId}?autoplay=1" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
-  savePlayedSong(songs[index]);
+  const track=songs[index];
+  playerContainer.innerHTML=`<audio src="${track.audio}" controls autoplay style="width:100%;"></audio>`;
+  isPlaying=true;
+  savePlayed(track);
+}
+
+function playPause(){
+  const audio=playerContainer.querySelector('audio');
+  if(!audio) return;
+  if(isPlaying) audio.pause(); else audio.play();
+  isPlaying=!isPlaying;
 }
 
 function nextSong(){
   if(shuffle) currentSongIndex=Math.floor(Math.random()*songs.length);
-  else { currentSongIndex++; if(currentSongIndex>=songs.length) currentSongIndex=0; }
+  else currentSongIndex++;
+  if(currentSongIndex>=songs.length) currentSongIndex=0;
   playSong(currentSongIndex);
 }
 
 function prevSong(){
-  currentSongIndex--; if(currentSongIndex<0) currentSongIndex=songs.length-1;
+  currentSongIndex--;
+  if(currentSongIndex<0) currentSongIndex=songs.length-1;
   playSong(currentSongIndex);
 }
 
@@ -92,40 +126,60 @@ function toggleLoop(){ loop=!loop; alert('Loop Playlist: '+loop);}
 function toggleLoopOne(){ loopOne=!loopOne; alert('Loop One Song: '+loopOne);}
 function toggleAIShuffle(){ aiShuffle=!aiShuffle; alert('AI Shuffle: '+aiShuffle);}
 
-// === Offline caching storage for songs ===
-let playedSongs = JSON.parse(localStorage.getItem('playedSongs')||'[]');
-function savePlayedSong(song){ 
-  if(!playedSongs.find(s=>s.videoId===song.videoId)) playedSongs.push(song); 
-  localStorage.setItem('playedSongs',JSON.stringify(playedSongs));
+// ==== Playlist ====
+function addToPlaylist(index){
+  const track=songs[index];
+  if(!playlist.find(t=>t.id===track.id)) playlist.push(track);
+  localStorage.setItem('playlist',JSON.stringify(playlist));
+  displayPlaylist();
 }
 
-// Display top played songs (basic stats)
+function displayPlaylist(){
+  playlistList.innerHTML='';
+  playlist.forEach((t,i)=>{
+    const div=document.createElement('div');
+    div.className='song';
+    div.innerHTML=`${t.name} — ${t.artist_name} 
+    <button onclick="playPlaylistSong(${i})">▶️</button>`;
+    playlistList.appendChild(div);
+  });
+}
+
+function playPlaylistSong(i){
+  currentSongIndex=i;
+  const track=playlist[i];
+  playerContainer.innerHTML=`<audio src="${track.audio}" controls autoplay style="width:100%;"></audio>`;
+  isPlaying=true;
+  savePlayed(track);
+}
+
+// ==== Stats & AI shuffle ====
+let playedSongs=JSON.parse(localStorage.getItem('playedSongs')||'[]');
+function savePlayed(track){
+  if(!playedSongs.find(t=>t.id===track.id)) playedSongs.push(track);
+  localStorage.setItem('playedSongs',JSON.stringify(playedSongs));
+  displayStats();
+}
+
 function displayStats(){
   const statsDiv=document.getElementById('stats');
-  statsDiv.innerHTML='<h3>Recently Played / Cached Songs:</h3>';
-  playedSongs.forEach(song=>{
+  statsDiv.innerHTML='<h3>Recently Played:</h3>';
+  playedSongs.forEach(t=>{
     const div=document.createElement('div');
-    div.textContent=song.title;
+    div.textContent=t.name+' — '+t.artist_name;
     statsDiv.appendChild(div);
   });
 }
+
+// Initial load
+displayPlaylist();
 displayStats();
 
-// PWA service worker registration
+// PWA service worker
 if('serviceWorker' in navigator){
   navigator.serviceWorker.register('/sw.js').then(()=>console.log('Service Worker Registered'));
 }
 </script>
-
-<div class="player">
-<button onclick="prevSong()">⏮️</button>
-<button onclick="playSong(currentSongIndex)">⏯️</button>
-<button onclick="nextSong()">⏭️</button>
-<button onclick="toggleShuffle()">🔀</button>
-<button onclick="toggleLoop()">🔁</button>
-<button onclick="toggleLoopOne()">🔂</button>
-<button onclick="toggleAIShuffle()">🤖</button>
-</div>
 
 </body>
 </html>
