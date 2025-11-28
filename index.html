@@ -1,234 +1,105 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Music Chamber</title>
-
-<!-- JoJo-ish font -->
-<link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet">
-
-<style>
-:root{
-  --jojo-purple:#2A0234;
-  --jojo-gold:#FFD966;
-  --jojo-magenta:#E6007E;
-  --bg:#0B0610;
-  --muted:#9aa4b2;
-}
-*{box-sizing:border-box;}
-body{margin:0;font-family:Monoton,Arial,sans-serif;background:var(--bg);color:#fff;min-height:100vh;}
-.topbar{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:linear-gradient(90deg,var(--jojo-purple),#14011a);}
-.title{font-weight: 800;background: linear-gradient(45deg, var(--jojo-gold), var(--jojo-magenta));-webkit-background-clip: text;-webkit-text-fill-color: transparent;letter-spacing: 2px;font-size:28px;}
-.small{background:transparent;border:1px solid rgba(255,255,255,0.06);color:var(--jojo-gold);padding:6px 10px;border-radius:8px;cursor:pointer;}
-.container{padding:16px;max-width:980px;margin:0 auto;}
-.search{display:flex;gap:8px;margin-bottom:12px;}
-.search input{flex:1;padding:12px;border-radius:10px;border:0;background:rgba(255,255,255,0.02);color:#fff;}
-.search button{padding:12px;border-radius:10px;border:0;background:var(--jojo-magenta);color:#fff;cursor:pointer;}
-.results{display:flex;flex-direction:column;gap:8px;max-height:50vh;overflow:auto;margin-bottom:12px;}
-.result{display:flex;gap:12px;padding:10px;border-radius:10px;background:rgba(255,255,255,0.02);align-items:center;}
-.result img{width:120px;height:68px;object-fit:cover;border-radius:6px;}
-.result .meta{flex:1;}
-.result .meta .t{color:var(--jojo-gold);font-weight:700;}
-.result .meta .c{color:var(--muted);font-size:13px;}
-.result .actions button{background:transparent;border:0;color:var(--muted);cursor:pointer;margin-left:8px;}
-.playerBar{position:fixed;left:16px;right:16px;bottom:16px;background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01));padding:10px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;}
-.controls button{background:transparent;border:0;color:var(--jojo-gold);font-size:18px;margin-left:8px;cursor:pointer;}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:flex;align-items:center;justify-content:center;z-index:9999;}
-.overlay.hidden{display:none;}
-.playerWrap{width:100%;max-width:900px;height:56vh;background:#000;border-radius:8px;overflow:hidden;}
-.close{position:absolute;right:12px;top:12px;background:transparent;border:0;color:#fff;font-size:22px;cursor:pointer;}
-.statsOverlay{position:fixed;top:16px;right:16px;background:rgba(0,0,0,0.85);padding:16px;border-radius:12px;z-index:1000;color:#fff;max-width:300px;display:none;}
-.statsOverlay h3{margin-top:0;color:var(--jojo-gold);}
-.statsOverlay ul{padding-left:16px;}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Music Chamber</title>
+  <!-- JoJo-styled font -->
+  <link href="https://fonts.googleapis.com/css2?family=Monoton&display=swap" rel="stylesheet">
+  <!-- Manifest for PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0B0610">
+  <style>
+    /* Minimalist JoJo theme */
+    body {margin:0; font-family: Arial,sans-serif; background: linear-gradient(135deg,#0B0610,#3D0066); color:#fff;}
+    header {display:flex; justify-content:center; align-items:center; height:80px; font-family:'Monoton',cursive; font-size:2em; background-color: rgba(0,0,0,0.5);}
+    .search-container {display:flex; justify-content:center; margin:20px;}
+    input[type="text"] {width:60%; padding:10px; border-radius:20px; border:none; outline:none; font-size:1em;}
+    button {margin-left:10px; padding:10px 15px; border-radius:50%; border:none; background-color:#ffcc00; color:#0B0610; cursor:pointer; font-weight:bold;}
+    .song-list {display:flex; flex-direction:column; align-items:center;}
+    .song {width:60%; background-color: rgba(255,255,255,0.1); margin:5px; padding:10px; border-radius:10px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:0.2s;}
+    .song:hover {background-color: rgba(255,255,255,0.3);}
+    .player {position:fixed; bottom:0; width:100%; background: rgba(0,0,0,0.7); display:flex; justify-content:space-around; align-items:center; padding:10px 0;}
+    .player button {background-color:transparent; color:#fff; font-size:1.2em;}
+    .stats {margin:20px; text-align:center;}
+  </style>
 </head>
 <body>
+  <header>Music Chamber</header>
 
-<header class="topbar">
-  <div class="title">Music Chamber</div>
-  <div>
-    <button id="btnStats" class="small">Stats</button>
-    <button id="btnInstall" class="small">Install</button>
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search for a song...">
+    <button onclick="searchSong()">🔍</button>
   </div>
-</header>
 
-<main class="container">
-  <section class="search">
-    <input id="searchInput" placeholder="Search songs, artists..." />
-    <button id="searchBtn">Search</button>
-  </section>
+  <div class="song-list" id="songList"></div>
 
-  <section id="results" class="results"></section>
+  <div class="player">
+    <button onclick="prevSong()">⏮️</button>
+    <button onclick="playPause()">⏯️</button>
+    <button onclick="nextSong()">⏭️</button>
+    <button onclick="toggleShuffle()">🔀</button>
+    <button onclick="toggleLoop()">🔁</button>
+    <button onclick="toggleLoopOne()">🔂</button>
+    <button onclick="toggleAIShuffle()">🤖</button>
+  </div>
 
-  <section class="playerBar">
-    <div class="now">
-      <div id="nowTitle">Not playing</div>
-      <div id="nowArtist"></div>
-    </div>
-    <div class="controls">
-      <button id="prev">⏮</button>
-      <button id="play">▶</button>
-      <button id="next">⏭</button>
-      <button id="shuffle">🔀</button>
-      <button id="loop">🔁</button>
-      <button id="aiShuffle">🤖</button>
-    </div>
-  </section>
-</main>
+  <div class="stats" id="stats"></div>
 
-<div id="playerOverlay" class="overlay hidden">
-  <button id="closePlayer" class="close">✕</button>
-  <div id="playerWrap" class="playerWrap"></div>
-</div>
+  <script>
+    // === YOUTUBE API KEY ===
+    const YT_API_KEY = 'AIzaSyCGIFGRXBMj9tfht-KksOlD04OWIgX0qHk';
 
-<div id="statsOverlay" class="statsOverlay">
-  <h3>Listening Stats</h3>
-  <div id="statsContent">Loading...</div>
-</div>
+    let currentSongIndex = 0;
+    let songs = [];
+    let isPlaying = false;
+    let shuffle = false;
+    let loop = false;
+    let loopOne = false;
+    let aiShuffle = false;
+    let audio = new Audio();
 
-<script>
-// ==== CONFIG ====
-const YT_API_KEY = 'AIzaSyCGIFGRXBMj9tfht-KksOlD04OWIgX0qHk';
- // Replace with YouTube Data API key
-const el=id=>document.getElementById(id);
+    async function searchSong() {
+      const query = document.getElementById('searchInput').value;
+      if(!query) return;
+      const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=10&q=${encodeURIComponent(query)}&key=${YT_API_KEY}`);
+      const data = await res.json();
+      songs = data.items.map(item => ({
+        title: item.snippet.title,
+        videoId: item.id.videoId
+      }));
+      displaySongs();
+    }
 
-// DOM elements
-const searchInput=el('searchInput'), searchBtn=el('searchBtn'), results=el('results');
-const playerOverlay=el('playerOverlay'), playerWrap=el('playerWrap'), closePlayer=el('closePlayer');
-const playBtn=el('play'), prevBtn=el('prev'), nextBtn=el('next'), shuffleBtn=el('shuffle');
-const loopBtn=el('loop'), aiBtn=el('aiShuffle');
-const nowTitle=el('nowTitle'), nowArtist=el('nowArtist');
-const statsOverlay=el('statsOverlay'), btnStats=el('btnStats'), statsContent=el('statsContent');
-
-// State
-let searchCache=[], queue=[], currentIndex=-1, isPlaying=false;
-let loopMode=0; // 0:none,1:loop playlist,2:loop one
-let shuffleMode=false;
-let listenHistory=[], stats={songs:{}, artists:{}};
-
-// PWA install prompt
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', e=>{
-  e.preventDefault();
-  deferredPrompt=e;
-});
-el('btnInstall').addEventListener('click', async ()=>{
-  if(!deferredPrompt) return;
-  deferredPrompt.prompt();
-  deferredPrompt=null;
-});
-
-// Search songs
-searchBtn.addEventListener('click', ()=>doSearch(searchInput.value.trim()));
-searchInput.addEventListener('keydown', e=>{ if(e.key==='Enter') doSearch(searchInput.value.trim()); });
-
-function doSearch(q){
-  if(!q) return;
-  results.innerHTML='<div style="padding:12px;color:var(--muted)">Searching…</div>';
-  fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=15&q=${encodeURIComponent(q)}&key=${YT_API_KEY}`)
-    .then(r=>r.json())
-    .then(data=>{
-      const items=data.items||[];
-      searchCache=items.map(it=>{
-        const vid=it.id.videoId;
-        const sn=it.snippet;
-        return {id:'yt_'+vid, videoId:vid, title:sn.title, artist:sn.channelTitle, thumbnail:(sn.thumbnails.medium||sn.thumbnails.default).url};
+    function displaySongs() {
+      const songList = document.getElementById('songList');
+      songList.innerHTML = '';
+      songs.forEach((song,index)=>{
+        const div = document.createElement('div');
+        div.className = 'song';
+        div.innerHTML = `<span>${song.title}</span> <button onclick="playSong(${index})">▶️</button>`;
+        songList.appendChild(div);
       });
-      renderResults(searchCache);
-    })
-    .catch(()=>{results.innerHTML='<div style="padding:12px;color:var(--muted)">Search failed</div>';});
-}
+    }
 
-function renderResults(list){
-  results.innerHTML='';
-  list.forEach((t,idx)=>{
-    const node=document.createElement('div');
-    node.className='result';
-    node.innerHTML=`<img src="${t.thumbnail}" alt="" />
-      <div class="meta"><div class="t">${t.title}</div><div class="c">${t.artist}</div></div>
-      <div class="actions"><button data-idx="${idx}" class="playNow">Play</button></div>`;
-    results.appendChild(node);
-  });
-  Array.from(document.querySelectorAll('.playNow')).forEach(btn=>{
-    btn.addEventListener('click', e=>{
-      const idx=+e.target.dataset.idx;
-      addToQueue(searchCache[idx]);
-      playIndex(queue.findIndex(q=>q.id===searchCache[idx].id));
-    });
-  });
-}
+    function playSong(index){
+      currentSongIndex=index;
+      audio.src=`https://www.youtube.com/embed/${songs[index].videoId}?autoplay=1`;
+      audio.play();
+      isPlaying=true;
+    }
 
-// Player functions
-function addToQueue(track){ if(!queue.find(q=>q.id===track.id)) queue.push(track); }
-function playIndex(idx){ if(idx<0 || idx>=queue.length) return; currentIndex=idx; loadCurrent(); }
-function loadCurrent(){
-  if(currentIndex<0||currentIndex>=queue.length) return;
-  const track=queue[currentIndex];
-  nowTitle.textContent=track.title;
-  nowArtist.textContent=track.artist;
-  playerWrap.innerHTML='';
-  const iframe=document.createElement('iframe');
-  iframe.width='100%'; iframe.height='100%'; iframe.style.border='0';
-  iframe.src=`https://www.youtube.com/embed/${track.videoId}?autoplay=1&controls=1&rel=0&playsinline=1`;
-  playerWrap.appendChild(iframe);
-  playerOverlay.classList.remove('hidden');
-  isPlaying=true;
-  // Update stats
-  listenHistory.push(track.id);
-  stats.songs[track.title]=(stats.songs[track.title]||0)+1;
-  stats.artists[track.artist]=(stats.artists[track.artist]||0)+1;
-  localStorage.setItem('mc_stats', JSON.stringify(stats));
-}
+    function playPause(){ if(isPlaying){audio.pause();} else {audio.play();} isPlaying=!isPlaying; }
+    function nextSong(){ if(shuffle){currentSongIndex=Math.floor(Math.random()*songs.length);} else {currentSongIndex++; if(currentSongIndex>=songs.length) currentSongIndex=0;} playSong(currentSongIndex); }
+    function prevSong(){ currentSongIndex--; if(currentSongIndex<0) currentSongIndex=songs.length-1; playSong(currentSongIndex); }
+    function toggleShuffle(){ shuffle=!shuffle; alert('Shuffle: '+shuffle);}
+    function toggleLoop(){ loop=!loop; alert('Loop Playlist: '+loop);}
+    function toggleLoopOne(){ loopOne=!loopOne; alert('Loop One Song: '+loopOne);}
+    function toggleAIShuffle(){ aiShuffle=!aiShuffle; alert('AI Shuffle: '+aiShuffle);}
 
-// Controls
-playBtn.addEventListener('click', ()=>{ isPlaying=!isPlaying; playBtn.textContent=isPlaying?'⏸':'▶'; });
-prevBtn.addEventListener('click', ()=>{ currentIndex=(currentIndex-1+queue.length)%queue.length; loadCurrent(); });
-nextBtn.addEventListener('click', ()=>{ nextTrack(); });
-shuffleBtn.addEventListener('click', ()=>{ shuffleMode=!shuffleMode; shuffleBtn.style.color=shuffleMode?'var(--jojo-gold)':'inherit'; });
-loopBtn.addEventListener('click', ()=>{ loopMode=(loopMode+1)%3; loopBtn.style.color=loopMode?'var(--jojo-gold)':'inherit'; });
-aiBtn.addEventListener('click', ()=>{ aiShuffle(); });
-
-function nextTrack(){
-  if(loopMode===2){ loadCurrent(); return; } // loop one
-  if(shuffleMode){ currentIndex=Math.floor(Math.random()*queue.length); }
-  else{ currentIndex=(currentIndex+1)%queue.length; }
-  if(currentIndex===0 && loopMode!==1) return; // end of playlist
-  loadCurrent();
-}
-
-// AI shuffle based on listenHistory
-function aiShuffle(){
-  if(searchCache.length===0) return;
-  const scores=searchCache.map(t=>{
-    let score=0;
-    listenHistory.forEach(h=>{
-      if(t.title.includes(h)) score++;
-    });
-    return score+Math.random();
-  });
-  const idx=scores.indexOf(Math.max(...scores));
-  addToQueue(searchCache[idx]);
-  playIndex(queue.findIndex(q=>q.id===searchCache[idx].id));
-}
-
-// Stats overlay
-btnStats.addEventListener('click', ()=>{
-  statsOverlay.style.display=statsOverlay.style.display==='block'?'none':'block';
-  renderStats();
-});
-function renderStats(){
-  const s=JSON.parse(localStorage.getItem('mc_stats')||'{"songs":{},"artists":{}}');
-  let html='<strong>Top Songs:</strong><ul>';
-  Object.entries(s.songs).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(e=>html+=`<li>${e[0]} (${e[1]} plays)</li>`);
-  html+='</ul><strong>Top Artists:</strong><ul>';
-  Object.entries(s.artists).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(e=>html+=`<li>${e[0]} (${e[1]} plays)</li>`);
-  html+='</ul>';
-  statsContent.innerHTML=html;
-}
-
-closePlayer.addEventListener('click', ()=>{ playerOverlay.classList.add('hidden'); playerWrap.innerHTML=''; });
-</script>
-
+    if('serviceWorker' in navigator){
+      navigator.serviceWorker.register('/sw.js').then(()=>console.log('Service Worker Registered'));
+    }
+  </script>
 </body>
 </html>
